@@ -45,10 +45,9 @@ total_materials = 0
 total_labor = 0
 total_other = 0
 
-# متغيرات الكميات لقائمة المشتريات
-qty_sika = 0
-qty_cem = 0
-qty_epoxy = 0
+# متغيرات الكميات والعمالة لتفادي الأخطاء البرمجية
+qty_sika = qty_cem = qty_epoxy = 0
+cl_lab_cost = sika_lab_cost = cem_lab_cost = epoxy_lab_cost = faz_lab_cost = faz_m2_cost = 0
 
 # --- المرحلة 1: احسبها صح ---
 st.subheader("📏👀 مرحلة 'احسبها صح' (المعاينة والرفع المساحي)")
@@ -71,7 +70,7 @@ if stage2:
     opt_cl_lab = c2.checkbox("عمالة مقطوعة")
     opt_cl_tool = c3.checkbox("أدوات ومواد ")
     
-    cl_m2_cost = cl_lab_cost = cl_tool_cost = 0
+    cl_m2_cost = cl_tool_cost = 0
     if opt_cl_m2: 
         cl_m2_cost = st.number_input("سعر تنظيف المتر:", value=7.0) * area
         total_other += cl_m2_cost
@@ -97,7 +96,7 @@ if stage3:
     opt_sika = c1.checkbox("مواد السيكا", value=True)
     opt_sika_lab = c2.checkbox("عمالة التعشيش", value=True)
     
-    sika_cost = sika_lab_cost = 0
+    sika_cost = 0
     if opt_sika:
         c_cov, c_pr = st.columns(2)
         sika_cov = c_cov.number_input("تغطية كيس السيكا (م2):", value=20.0)
@@ -115,7 +114,7 @@ if stage3:
     opt_cem = c3.checkbox("أسمنت وبطحاء", value=True)
     opt_cem_lab = c4.checkbox("عمالة التلييس", value=True)
     
-    cem_cost = cem_lab_cost = 0
+    cem_cost = 0
     if opt_cem:
         c_cov2, c_pr2, c_sand = st.columns(3)
         cem_cov = c_cov2.number_input("تغطية كيس الأسمنت (م2):", value=5.0)
@@ -144,7 +143,7 @@ if stage4:
     opt_epoxy_lab = c2.checkbox("عمالة العزل", value=True)
     opt_epoxy_tool = c3.checkbox("أدوات ومعدات")
     
-    epoxy_cost = epoxy_lab_cost = epoxy_tool_cost = 0
+    epoxy_cost = epoxy_tool_cost = 0
     if opt_epoxy:
         c_cov3, c_pr3 = st.columns(2)
         epoxy_cov = c_cov3.number_input("تغطية البرميل (م2):", value=35.0)
@@ -176,7 +175,7 @@ if stage5:
     opt_faz_lab = c2.checkbox("مصنعية مقطوعة", value=True)
     opt_faz_tool = c3.checkbox("أدوات فزعة")
     
-    faz_m2_cost = faz_lab_cost = faz_tool_cost = 0
+    faz_tool_cost = 0
     if opt_faz_m2: 
         faz_m2_cost = st.number_input("سعر مصنعية المتر:", value=15.0) * area
         total_labor += faz_m2_cost
@@ -226,6 +225,17 @@ if st.button("احسب التسعيرة النهائية 🚀", type="primary", 
         purchasing_list += f"  - عزل (إيبوكسي): {qty_epoxy} برميل\n"
     if purchasing_list == "":
         purchasing_list = "  - لا توجد مواد محددة للطلب بالكمية في هذه التسعيرة.\n"
+        
+    # تجهيز تفصيل العمالة
+    labor_details = ""
+    if cl_lab_cost > 0: labor_details += f"  - عمالة التنظيف: {cl_lab_cost:.2f} ريال\n"
+    if sika_lab_cost > 0: labor_details += f"  - عمالة التعشيش: {sika_lab_cost:.2f} ريال\n"
+    if cem_lab_cost > 0: labor_details += f"  - عمالة التلييس: {cem_lab_cost:.2f} ريال\n"
+    if epoxy_lab_cost > 0: labor_details += f"  - عمالة العزل (إيبوكسي): {epoxy_lab_cost:.2f} ريال\n"
+    if faz_lab_cost > 0: labor_details += f"  - عمالة الفزعة (مقطوعة): {faz_lab_cost:.2f} ريال\n"
+    if faz_m2_cost > 0: labor_details += f"  - عمالة الفزعة (بالمتر): {faz_m2_cost:.2f} ريال\n"
+    if labor_details == "":
+        labor_details = "  - لا توجد مستحقات عمالة مسجلة.\n"
 
     tab1, tab2 = st.tabs(["⭐⭐⭐ عرض سعر العميل", "🔒 تقرير الإدارة السري"])
     
@@ -247,17 +257,21 @@ if st.button("احسب التسعيرة النهائية 🚀", type="primary", 
     with tab2:
         st.warning("تقرير الإدارة الخاص (لوحة التحكم المالية)")
         st.write(f"**💵 إجمالي ما سيدفعه العميل:** {suggested_price:.2f} ريال")
+        st.write(f"**📉 إجمالي التكلفة (مواد + عمالة):** {total_cost:.2f} ريال")
         st.markdown("---")
         
         st.write("**📦 قائمة المشتريات المطلوبة:**")
         st.code(purchasing_list, language="text")
+        st.write(f"**إجمالي حساب المواد والأدوات:** {total_materials:.2f} ريال")
         st.markdown("---")
         
-        st.write("**📊 تفصيل المصروفات والتشغيل:**")
-        st.write(f"🧱 **حساب المواد والأدوات:** {total_materials:.2f} ريال")
-        st.write(f"👷‍♂️ **حساب العمالة والمصنعيات:** {total_labor:.2f} ريال")
-        if total_other > 0:
-            st.write(f"🔄 **تكاليف أخرى (تنظيف/مصاريف):** {total_other:.2f} ريال")
+        st.write("**👷‍♂️ تفصيل مستحقات العمالة:**")
+        st.code(labor_details, language="text")
+        st.write(f"**إجمالي حساب العمالة:** {total_labor:.2f} ريال")
         st.markdown("---")
+        
+        if total_other > 0:
+            st.write(f"🔄 **تكاليف أخرى (مثل مقاول التنظيف بالمتر):** {total_other:.2f} ريال")
+            st.markdown("---")
         
         st.success(f"**💰 صافي الربح المتوقع:** {net_profit:.2f} ريال")
