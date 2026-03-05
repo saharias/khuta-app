@@ -19,7 +19,6 @@ st.markdown("---")
 # 2. بيانات المشروع والمقاسات
 st.header("📋 1. بيانات المشروع والمقاسات")
 client_name = st.text_input("اسم العميل:", "عميل جديد")
-
 shape = st.radio("شكل الخزان:", ["مستطيل", "دائري"])
 
 st.write("**📐 مقاسات الخزان (بالمتر):**")
@@ -39,9 +38,12 @@ st.markdown("---")
 
 # 3. المراحل والتكاليف
 st.header("🛠️ 2. اختيار المراحل وتفصيل التكاليف")
-total_cost = 0  # إجمالي التكلفة المبدئي
-client_report = ""
-internal_report = ""
+
+# حصالات لتجميع التكاليف وتصنيفها للإدارة
+total_cost = 0
+total_materials = 0
+total_labor = 0
+total_other = 0
 
 # --- المرحلة 1: احسبها صح ---
 st.subheader("📏👀 مرحلة 'احسبها صح' (المعاينة والرفع المساحي)")
@@ -51,9 +53,6 @@ if stage1:
     kashfiya = st.number_input("رسوم المعاينة والكشفية:", value=100.0, step=10.0)
     cost_stage1 = kashfiya
     total_cost += cost_stage1
-    client_report += f"- مرحلة 'احسبها صح' (المعاينة): {cost_stage1:.2f} ريال\n"
-    internal_report += f"- معاينة: {cost_stage1:.2f} ريال\n"
-    st.caption(f"تكلفة هذه المرحلة: {cost_stage1:.2f} ريال")
 st.markdown("---")
 
 # --- المرحلة 2: التصفية ---
@@ -68,27 +67,30 @@ if stage2:
     opt_cl_tool = c3.checkbox("أدوات ومواد")
     
     cl_m2_cost = cl_lab_cost = cl_tool_cost = 0
-    if opt_cl_m2: cl_m2_cost = st.number_input("سعر تنظيف المتر:", value=7.0) * area
-    if opt_cl_lab: cl_lab_cost = st.number_input("تكلفة العمالة:", value=150.0)
-    if opt_cl_tool: cl_tool_cost = st.number_input("مواد التنظيف:", value=100.0)
-    
+    if opt_cl_m2: 
+        cl_m2_cost = st.number_input("سعر تنظيف المتر:", value=7.0) * area
+        total_other += cl_m2_cost
+    if opt_cl_lab: 
+        cl_lab_cost = st.number_input("تكلفة عمالة التنظيف:", value=150.0)
+        total_labor += cl_lab_cost
+    if opt_cl_tool: 
+        cl_tool_cost = st.number_input("تكلفة مواد التنظيف:", value=100.0)
+        total_materials += cl_tool_cost
+        
     cost_stage2 = cl_m2_cost + cl_lab_cost + cl_tool_cost
     total_cost += cost_stage2
-    if cost_stage2 > 0:
-        client_report += f"- مرحلة 'التصفية' (الغسيل والتعقيم): [سيتم حسابها لاحقاً مع الربح]\n"
-        internal_report += f"- التصفية: التكلفة الفعلية {cost_stage2:.2f} ريال\n"
-    st.caption(f"تكلفة هذه المرحلة: {cost_stage2:.2f} ريال")
+    st.caption(f"إجمالي تكلفة هذه المرحلة: {cost_stage2:.2f} ريال")
 st.markdown("---")
 
 # --- المرحلة 3: التجديد ---
-st.subheader("🧱🩹 مرحلة 'التجديد' (معالجة التعشيش والترميم الإنشائي)")
+st.subheader("🧱🩹 مرحلة 'التجديد' (معالجة التعشيش والترميم)")
 stage3 = st.checkbox("تفعيل مرحلة التجديد", value=True)
 cost_stage3 = 0
 if stage3:
     st.write("**التعشيش:**")
     c1, c2 = st.columns(2)
-    opt_sika = c1.checkbox("إضافة مواد السيكا", value=True)
-    opt_sika_lab = c2.checkbox("إضافة عمالة التعشيش", value=True)
+    opt_sika = c1.checkbox("مواد السيكا", value=True)
+    opt_sika_lab = c2.checkbox("عمالة التعشيش", value=True)
     
     sika_cost = sika_lab_cost = 0
     if opt_sika:
@@ -97,40 +99,43 @@ if stage3:
         sika_pr = c_pr.number_input("سعر كيس السيكا:", value=45.0)
         qty_sika = math.ceil(area / sika_cov) if sika_cov > 0 else 0
         sika_cost = qty_sika * sika_pr
+        st.info(f"📦 عدد أكياس السيكا المطلوبة: **{qty_sika} كيس**")
+        total_materials += sika_cost
     if opt_sika_lab:
-        sika_lab_cost = st.number_input("عمالة التعشيش:", value=300.0)
+        sika_lab_cost = st.number_input("حساب عمالة التعشيش:", value=300.0)
+        total_labor += sika_lab_cost
         
     st.write("**التلييس:**")
     c3, c4 = st.columns(2)
-    opt_cem = c3.checkbox("إضافة أسمنت وبطحاء", value=True)
-    opt_cem_lab = c4.checkbox("إضافة عمالة التلييس", value=True)
+    opt_cem = c3.checkbox("أسمنت وبطحاء", value=True)
+    opt_cem_lab = c4.checkbox("عمالة التلييس", value=True)
     
     cem_cost = cem_lab_cost = 0
     if opt_cem:
         c_cov2, c_pr2, c_sand = st.columns(3)
         cem_cov = c_cov2.number_input("تغطية كيس الأسمنت (م2):", value=5.0)
         cem_pr = c_pr2.number_input("سعر كيس الأسمنت:", value=17.0)
-        sand_cost = c_sand.number_input("سعر البطحاء:", value=150.0)
+        sand_cost = c_sand.number_input("تكلفة البطحاء:", value=150.0)
         qty_cem = math.ceil(area / cem_cov) if cem_cov > 0 else 0
         cem_cost = (qty_cem * cem_pr) + sand_cost
+        st.info(f"📦 عدد أكياس الأسمنت المطلوبة: **{qty_cem} كيس**")
+        total_materials += cem_cost
     if opt_cem_lab:
-        cem_lab_cost = st.number_input("عمالة التلييس:", value=400.0)
+        cem_lab_cost = st.number_input("حساب عمالة التلييس:", value=400.0)
+        total_labor += cem_lab_cost
         
     cost_stage3 = sika_cost + sika_lab_cost + cem_cost + cem_lab_cost
     total_cost += cost_stage3
-    if cost_stage3 > 0:
-        client_report += f"- مرحلة 'التجديد' (الترميم والتعشيش): [سيتم حسابها لاحقاً مع الربح]\n"
-        internal_report += f"- التجديد: التكلفة الفعلية {cost_stage3:.2f} ريال\n"
-    st.caption(f"تكلفة هذه المرحلة: {cost_stage3:.2f} ريال")
+    st.caption(f"إجمالي تكلفة هذه المرحلة: {cost_stage3:.2f} ريال")
 st.markdown("---")
 
 # --- المرحلة 4: ازهلها ---
-st.subheader("🛡️🔑 مرحلة 'ازهلها' (الحل المتكامل - توريد وتنفيذ العزل)")
+st.subheader("🛡️🔑 مرحلة 'ازهلها' (الحل المتكامل - توريد وتنفيذ)")
 stage4 = st.checkbox("تفعيل مرحلة ازهلها", value=True)
 cost_stage4 = 0
 if stage4:
     c1, c2, c3 = st.columns(3)
-    opt_epoxy = c1.checkbox("مواد العزل (إيبوكسي)", value=True)
+    opt_epoxy = c1.checkbox("مواد العزل", value=True)
     opt_epoxy_lab = c2.checkbox("عمالة العزل", value=True)
     opt_epoxy_tool = c3.checkbox("أدوات أخرى")
     
@@ -141,21 +146,22 @@ if stage4:
         epoxy_pr = c_pr3.number_input("سعر البرميل:", value=350.0)
         qty_epoxy = math.ceil(area / epoxy_cov) if epoxy_cov > 0 else 0
         epoxy_cost = qty_epoxy * epoxy_pr
+        st.info(f"🛢️ عدد براميل العزل المطلوبة: **{qty_epoxy} برميل**")
+        total_materials += epoxy_cost
     if opt_epoxy_lab:
-        epoxy_lab_cost = st.number_input("عمالة العزل:", value=500.0)
+        epoxy_lab_cost = st.number_input("حساب عمالة العزل:", value=500.0)
+        total_labor += epoxy_lab_cost
     if opt_epoxy_tool:
-        epoxy_tool_cost = st.number_input("أدوات العزل:", value=100.0)
+        epoxy_tool_cost = st.number_input("تكلفة أدوات العزل:", value=100.0)
+        total_materials += epoxy_tool_cost
         
     cost_stage4 = epoxy_cost + epoxy_lab_cost + epoxy_tool_cost
     total_cost += cost_stage4
-    if cost_stage4 > 0:
-        client_report += f"- مرحلة 'ازهلها' (العزل المتكامل): [سيتم حسابها لاحقاً مع الربح]\n"
-        internal_report += f"- ازهلها: التكلفة الفعلية {cost_stage4:.2f} ريال\n"
-    st.caption(f"تكلفة هذه المرحلة: {cost_stage4:.2f} ريال")
+    st.caption(f"إجمالي تكلفة هذه المرحلة: {cost_stage4:.2f} ريال")
 st.markdown("---")
 
 # --- المرحلة 5: الفزعة ---
-st.subheader("👷‍♂️💪 مرحلة 'الفزعة' (تنفيذ العزل بمواد العميل - مصنعية)")
+st.subheader("👷‍♂️💪 مرحلة 'الفزعة' (تنفيذ بمواد العميل - مصنعية)")
 stage5 = st.checkbox("تفعيل مرحلة الفزعة", value=False)
 cost_stage5 = 0
 if stage5:
@@ -163,29 +169,31 @@ if stage5:
     c1, c2, c3 = st.columns(3)
     opt_faz_m2 = c1.checkbox("مصنعية بالمتر")
     opt_faz_lab = c2.checkbox("مصنعية مقطوعة", value=True)
-    opt_faz_tool = c3.checkbox("تكلفة أدوات")
+    opt_faz_tool = c3.checkbox("أدوات ومعدات")
     
     faz_m2_cost = faz_lab_cost = faz_tool_cost = 0
-    if opt_faz_m2: faz_m2_cost = st.number_input("سعر مصنعية المتر:", value=15.0) * area
-    if opt_faz_lab: faz_lab_cost = st.number_input("مصنعية عمالة (مقطوعة):", value=600.0)
-    if opt_faz_tool: faz_tool_cost = st.number_input("أدوات الفزعة:", value=100.0)
-    
+    if opt_faz_m2: 
+        faz_m2_cost = st.number_input("سعر مصنعية المتر:", value=15.0) * area
+        total_labor += faz_m2_cost
+    if opt_faz_lab: 
+        faz_lab_cost = st.number_input("حساب العمالة (مقطوعة):", value=600.0)
+        total_labor += faz_lab_cost
+    if opt_faz_tool: 
+        faz_tool_cost = st.number_input("تكلفة أدوات الفزعة:", value=100.0)
+        total_materials += faz_tool_cost
+        
     cost_stage5 = faz_m2_cost + faz_lab_cost + faz_tool_cost
     total_cost += cost_stage5
-    if cost_stage5 > 0:
-        client_report += f"- مرحلة 'الفزعة' (مصنعية فقط): [سيتم حسابها لاحقاً مع الربح]\n"
-        internal_report += f"- الفزعة: التكلفة الفعلية {cost_stage5:.2f} ريال\n"
-    st.caption(f"تكلفة هذه المرحلة: {cost_stage5:.2f} ريال")
+    st.caption(f"إجمالي تكلفة هذه المرحلة: {cost_stage5:.2f} ريال")
 st.markdown("---")
 
-# 4. هامش الربح والنتيجة النهائية
+# 4. النتيجة النهائية
 st.header("💰 3. هامش الربح والنتيجة النهائية")
 profit_margin = st.number_input("نسبة هامش الربح % (شاملة للطوارئ):", value=25.0, step=1.0)
 
 if st.button("احسب التسعيرة النهائية 🚀", type="primary", use_container_width=True):
     profit_factor = 1 + (profit_margin / 100)
     
-    # تحديث تقرير العميل بناءً على الربح (باستثناء رسوم المعاينة اللي ما ينضرب فيها الربح عادة)
     final_client_report = ""
     if stage1 and cost_stage1 > 0:
         final_client_report += f"- 📏👀 مرحلة 'احسبها صح' (المعاينة): {cost_stage1:.2f} ريال\n"
@@ -198,7 +206,6 @@ if st.button("احسب التسعيرة النهائية 🚀", type="primary", 
     if stage5 and cost_stage5 > 0:
         final_client_report += f"- 👷‍♂️💪 مرحلة 'الفزعة': {cost_stage5 * profit_factor:.2f} ريال\n"
 
-    # حساب الإجمالي النهائي (التكاليف التشغيلية * الربح) + رسوم المعاينة
     operational_cost = cost_stage2 + cost_stage3 + cost_stage4 + cost_stage5
     suggested_price = (operational_cost * profit_factor) + cost_stage1
     net_profit = suggested_price - total_cost
@@ -222,7 +229,13 @@ if st.button("احسب التسعيرة النهائية 🚀", type="primary", 
 ================================""", language="text")
         
     with tab2:
-        st.warning("تقرير الإدارة الخاص (لا يشارك مع العميل)")
-        st.write(f"**إجمالي التكلفة التشغيلية الفعلية:** {total_cost:.2f} ريال")
-        st.write(f"**صافي الربح المتوقع:** {net_profit:.2f} ريال")
-        st.code(internal_report, language="text")
+        st.warning("تقرير الإدارة الخاص (لوحة التحكم المالية)")
+        st.write(f"**💵 إجمالي ما سيدفعه العميل:** {suggested_price:.2f} ريال")
+        st.markdown("---")
+        st.write("**تفصيل المصروفات:**")
+        st.write(f"🧱 **حساب المواد والأدوات:** {total_materials:.2f} ريال")
+        st.write(f"👷‍♂️ **حساب العمالة والمصنعيات:** {total_labor:.2f} ريال")
+        if total_other > 0:
+            st.write(f"🔄 **تكاليف أخرى (مثل التنظيف بالمتر):** {total_other:.2f} ريال")
+        st.markdown("---")
+        st.success(f"**💰 صافي الربح المتوقع:** {net_profit:.2f} ريال")
